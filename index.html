@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor con Contador y Favoritos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .player-container {
+            margin-bottom: 20px;
+        }
+        .fixed-player-container {
+            margin-bottom: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 450px;
+            border: none;
+            border-radius: 4px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .number-input {
+            width: 60px;
+            padding: 10px;
+            font-size: 18px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .url-display {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .save-btn {
+            background-color: #2196F3;
+            margin-top: 15px;
+        }
+        .save-btn:hover {
+            background-color: #0b7dda;
+        }
+        .export-btn {
+            background-color: #9c27b0;
+            margin-top: 15px;
+        }
+        .export-btn:hover {
+            background-color: #7b1fa2;
+        }
+        .saved-links {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .saved-link {
+            background-color: #ff9800;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .saved-link:hover {
+            background-color: #e68a00;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .json-output {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .source-selector {
+            margin-bottom: 20px;
+        }
+        .source-btn {
+            background-color: #607d8b;
+            margin: 0 5px;
+        }
+        .source-btn.active {
+            background-color: #455a64;
+        }
+        .fixed-player-label {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Reproductor de Stream</h1>
+        
+        <div class="source-selector">
+            <button id="stream2wetchBtn" class="source-btn active">Stream2Wetch</button>
+            <button id="daddyliveBtn" class="source-btn">DaddyLiveHD</button>
+        </div>
+        
+        <!-- Reproductor principal -->
+        <div class="player-container">
+            <iframe id="player" src="https://stream2wetch.top/embed/stream-1.php" allowfullscreen></iframe>
+        </div>
+        
+        <!-- Reproductor fijo de DaddyLiveHD -->
+        <div class="fixed-player-container">
+            <div class="fixed-player-label">DaddyLiveHD Página Principal</div>
+            <iframe id="fixedPlayer" src="https://daddylivehd1.click/" allowfullscreen></iframe>
+        </div>
+        
+        <div class="controls">
+            <button id="decrementBtn" disabled>-</button>
+            <input type="number" id="numberInput" class="number-input" value="1" min="1" max="1000">
+            <button id="incrementBtn">+</button>
+        </div>
+        
+        <div class="url-display" id="urlDisplay">
+            https://stream2wetch.top/embed/stream-1.php
+        </div>
+        
+        <button id="saveBtn" class="save-btn">Guardar enlace</button>
+        <button id="exportBtn" class="export-btn">Exportar a JSON</button>
+        
+        <div class="saved-links" id="savedLinks">
+            <!-- Aquí aparecerán los enlaces guardados -->
+        </div>
+    </div>
+
+    <!-- Modal para guardar enlace -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Guardar enlace</h2>
+            <div class="form-group">
+                <label for="linkTitle">Título:</label>
+                <input type="text" id="linkTitle" placeholder="Ej: DAZN F1 1080">
+            </div>
+            <div class="form-group">
+                <label for="linkDeporte">Deporte:</label>
+                <input type="text" id="linkDeporte" placeholder="Ej: f1, futbol, nba">
+            </div>
+            <div class="form-group">
+                <label for="linkColor">Color (hex):</label>
+                <input type="text" id="linkColor" placeholder="#0077ff" value="#0077ff">
+            </div>
+            <div class="form-group">
+                <label for="linkIdioma">Idioma:</label>
+                <select id="linkIdioma">
+                    <option value="ES">Español</option>
+                    <option value="EN">Inglés</option>
+                    <option value="FR">Francés</option>
+                    <option value="DE">Alemán</option>
+                    <option value="PT">Portugués</option>
+                    <option value="IT">Italiano</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="linkIcono">Mostrar Icono:</label>
+                <select id="linkIcono">
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="linkMulti">Mostrar Multi:</label>
+                <select id="linkMulti">
+                    <option value="true">Sí</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="linkPuntuacion">Puntuación (0-5):</label>
+                <input type="number" id="linkPuntuacion" min="0" max="5" value="3">
+            </div>
+            <div class="form-group">
+                <label for="linkSource">Fuente:</label>
+                <select id="linkSource">
+                    <option value="stream2wetch">Stream2Wetch</option>
+                    <option value="daddylive">DaddyLiveHD</option>
+                </select>
+            </div>
+            <button id="confirmSaveBtn">Guardar</button>
+        </div>
+    </div>
+
+    <!-- Modal para exportar JSON -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Exportar a JSON</h2>
+            <p>Copie el siguiente JSON para usarlo en su aplicación:</p>
+            <textarea class="json-output" id="jsonOutput" readonly></textarea>
+            <button id="copyJsonBtn">Copiar al portapapeles</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const player = document.getElementById('player');
+            const fixedPlayer = document.getElementById('fixedPlayer');
+            const numberInput = document.getElementById('numberInput');
+            const incrementBtn = document.getElementById('incrementBtn');
+            const decrementBtn = document.getElementById('decrementBtn');
+            const urlDisplay = document.getElementById('urlDisplay');
+            const saveBtn = document.getElementById('saveBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const savedLinksContainer = document.getElementById('savedLinks');
+            const stream2wetchBtn = document.getElementById('stream2wetchBtn');
+            const daddyliveBtn = document.getElementById('daddyliveBtn');
+            
+            // Elementos del modal
+            const saveModal = document.getElementById('saveModal');
+            const exportModal = document.getElementById('exportModal');
+            const closeButtons = document.querySelectorAll('.close');
+            const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+            const copyJsonBtn = document.getElementById('copyJsonBtn');
+            const jsonOutput = document.getElementById('jsonOutput');
+            
+            let currentNumber = 1;
+            const minNumber = 1;
+            const maxNumber = 1000;
+            let currentSource = 'stream2wetch'; // 'stream2wetch' o 'daddylive'
+            
+            // Cargar enlaces guardados del localStorage
+            let savedLinks = JSON.parse(localStorage.getItem('streamLinks')) || [];
+            renderSavedLinks();
+            
+            function updatePlayer() {
+                let newUrl;
+                if (currentSource === 'stream2wetch') {
+                    newUrl = `https://stream2wetch.top/embed/stream-${currentNumber}.php`;
+                } else {
+                    newUrl = `https://daddylivehd1.click/stream/stream-${currentNumber}.php`;
+                }
+                
+                player.src = newUrl;
+                numberInput.value = currentNumber;
+                urlDisplay.textContent = newUrl;
+                
+                // Habilitar/deshabilitar botones según los límites
+                decrementBtn.disabled = currentNumber <= minNumber;
+                incrementBtn.disabled = currentNumber >= maxNumber;
+            }
+            
+            function renderSavedLinks() {
+                savedLinksContainer.innerHTML = '';
+                savedLinks.forEach((link, index) => {
+                    const linkElement = document.createElement('div');
+                    linkElement.className = 'saved-link';
+                    linkElement.textContent = link.title || `${link.source === 'daddylive' ? 'DaddyLive' : 'Stream'} ${link.number}`;
+                    linkElement.title = `Cargar ${link.title || `${link.source === 'daddylive' ? 'DaddyLive' : 'Stream'} ${link.number}`}`;
+                    linkElement.style.backgroundColor = link.color || '#ff9800';
+                    
+                    linkElement.addEventListener('click', function() {
+                        currentNumber = link.number;
+                        currentSource = link.source || 'stream2wetch';
+                        updateSourceButtons();
+                        updatePlayer();
+                    });
+                    
+                    savedLinksContainer.appendChild(linkElement);
+                });
+            }
+            
+            function updateSourceButtons() {
+                stream2wetchBtn.classList.toggle('active', currentSource === 'stream2wetch');
+                daddyliveBtn.classList.toggle('active', currentSource === 'daddylive');
+            }
+            
+            function generateJsonOutput() {
+                const jsonData = savedLinks.map(link => ({
+                    link: link.source === 'daddylive' 
+                        ? `https://daddylivehd1.click/stream/stream-${link.number}.php`
+                        : `https://stream2wetch.top/embed/stream-${link.number}.php`,
+                    title: link.title || `${link.source === 'daddylive' ? 'DaddyLive' : 'Stream'} ${link.number}`,
+                    deporte: link.deporte || 'otros',
+                    color: link.color || '#0077ff',
+                    idioma: link.idioma || 'ES',
+                    mostrarIcono: link.mostrarIcono || false,
+                    mostrarMulti: link.mostrarMulti || false,
+                    puntuacion: link.puntuacion || 3,
+                    source: link.source || 'stream2wetch'
+                }));
+                
+                return JSON.stringify(jsonData, null, 2);
+            }
+            
+            // Manejar cambios en el input numérico
+            numberInput.addEventListener('change', function() {
+                let newNumber = parseInt(numberInput.value);
+                
+                if (isNaN(newNumber)) {
+                    newNumber = minNumber;
+                } else if (newNumber < minNumber) {
+                    newNumber = minNumber;
+                } else if (newNumber > maxNumber) {
+                    newNumber = maxNumber;
+                }
+                
+                currentNumber = newNumber;
+                updatePlayer();
+            });
+            
+            incrementBtn.addEventListener('click', function() {
+                if (currentNumber < maxNumber) {
+                    currentNumber++;
+                    updatePlayer();
+                }
+            });
+            
+            decrementBtn.addEventListener('click', function() {
+                if (currentNumber > minNumber) {
+                    currentNumber--;
+                    updatePlayer();
+                }
+            });
+            
+            // Cambiar entre fuentes
+            stream2wetchBtn.addEventListener('click', function() {
+                currentSource = 'stream2wetch';
+                updateSourceButtons();
+                updatePlayer();
+            });
+            
+            daddyliveBtn.addEventListener('click', function() {
+                currentSource = 'daddylive';
+                updateSourceButtons();
+                updatePlayer();
+            });
+            
+            saveBtn.addEventListener('click', function() {
+                saveModal.style.display = 'block';
+                document.getElementById('linkTitle').value = 
+                    currentSource === 'daddylive' 
+                    ? `DaddyLive ${currentNumber}` 
+                    : `Stream ${currentNumber}`;
+                document.getElementById('linkSource').value = currentSource;
+            });
+            
+            exportBtn.addEventListener('click', function() {
+                jsonOutput.value = generateJsonOutput();
+                exportModal.style.display = 'block';
+            });
+            
+            confirmSaveBtn.addEventListener('click', function() {
+                const title = document.getElementById('linkTitle').value;
+                const deporte = document.getElementById('linkDeporte').value;
+                const color = document.getElementById('linkColor').value;
+                const idioma = document.getElementById('linkIdioma').value;
+                const mostrarIcono = document.getElementById('linkIcono').value === 'true';
+                const mostrarMulti = document.getElementById('linkMulti').value === 'true';
+                const puntuacion = parseInt(document.getElementById('linkPuntuacion').value);
+                const source = document.getElementById('linkSource').value;
+                
+                if (!title) {
+                    alert('Por favor ingrese un título');
+                    return;
+                }
+                
+                // Verificar si ya existe un enlace con este número y fuente
+                const existingIndex = savedLinks.findIndex(link => 
+                    link.number === currentNumber && link.source === source
+                );
+                
+                if (existingIndex !== -1) {
+                    // Actualizar si ya existe
+                    savedLinks[existingIndex] = {
+                        ...savedLinks[existingIndex],
+                        title,
+                        deporte,
+                        color,
+                        idioma,
+                        mostrarIcono,
+                        mostrarMulti,
+                        puntuacion,
+                        number: currentNumber,
+                        source
+                    };
+                } else {
+                    // Añadir nuevo enlace
+                    savedLinks.push({
+                        number: currentNumber,
+                        title,
+                        deporte,
+                        color,
+                        idioma,
+                        mostrarIcono,
+                        mostrarMulti,
+                        puntuacion,
+                        source
+                    });
+                }
+                
+                // Guardar en localStorage
+                localStorage.setItem('streamLinks', JSON.stringify(savedLinks));
+                renderSavedLinks();
+                saveModal.style.display = 'none';
+            });
+            
+            copyJsonBtn.addEventListener('click', function() {
+                jsonOutput.select();
+                document.execCommand('copy');
+                alert('JSON copiado al portapapeles');
+            });
+            
+            // Cerrar modales al hacer clic en la X
+            closeButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    saveModal.style.display = 'none';
+                    exportModal.style.display = 'none';
+                });
+            });
+            
+            // Cerrar modales al hacer clic fuera del contenido
+            window.addEventListener('click', function(event) {
+                if (event.target === saveModal) {
+                    saveModal.style.display = 'none';
+                }
+                if (event.target === exportModal) {
+                    exportModal.style.display = 'none';
+                }
+            });
+            
+            // Inicializar
+            updateSourceButtons();
+            updatePlayer();
+        });
+    </script>
+</body>
+</html>
